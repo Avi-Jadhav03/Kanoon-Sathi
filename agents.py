@@ -142,3 +142,37 @@ Return only JSON:"""
         "retry_query": parsed["retry_query"],
         "retry_count": state["retry_count"] + 1
     }
+
+
+def report_generator(state: LegalAuditState):
+    prompt = f"""You are a helpful legal assistant explaining legal issues to a common person in India.
+
+I will give you a list of legal findings from a document audit.
+Your job is to convert these into a simple, clear audit report.
+
+Rules:
+- Write in plain English, no legal jargon
+- Be empathetic - the user is not a lawyer
+- Return ONLY valid JSON, no markdown, no backticks
+- Return exactly this structure:
+{{
+    "overall_risk": "High/Medium/Low",
+    "summary": "2-3 line plain English summary of the document's condition",
+    "issues": [
+        {{
+            "issue": "what is wrong in simple words",
+            "why_it_matters": "why this could harm the user",
+            "how_to_fix": "simple actionable fix"
+        }}
+    ]
+}}
+
+Document Type: {state['document_type']}
+Findings: {state['analyst_findings']}
+
+Return only JSON:"""
+
+    result = model.invoke(prompt)
+    cleaned = result.content.strip()
+    parsed = json.loads(cleaned)
+    return {"final_report": str(parsed)}

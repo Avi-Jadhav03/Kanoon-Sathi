@@ -29,26 +29,34 @@ test_state = {
 
 # Run agent 1
 result1 = type_identifier(test_state)
-print("Type:", result1)
+# print("Type:", result1)
 test_state.update(result1)
 
 # Run agent 2
 result2 = meaning_extractor(test_state)
-print("Extracted:", result2)
+# print("Extracted:", result2)
 test_state.update(result2)
 
 # Run agent 3
 result3 = law_fetcher(test_state)
-print("Laws:", result3)
+# print("Laws:", result3)
 
 
 
 result4 = cross_checker(test_state)
-print("Findings:", result4)
+# print("Findings:", result4)
 test_state.update(result4)
 
 
 
 result5 = hallucination_guard(test_state)
-print("Guard:", result5)
+# print("Guard:", result5)
 test_state.update(result5)
+
+from agents import report_generator
+
+# Force guard to pass for testing
+test_state["guard_verdict"] = "pass"
+
+result6 = report_generator(test_state)
+print("Report:", result6)
