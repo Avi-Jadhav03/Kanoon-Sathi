@@ -112,3 +112,33 @@ Return only JSON array:"""
     cleaned = result.content.strip()
     parsed = json.loads(cleaned)
     return {"analyst_findings": parsed}
+
+
+def hallucination_guard(state: LegalAuditState):
+    prompt = f"""You are a strict legal AI auditor.
+
+I will give you a list of findings from a legal document analysis and the actual retrieved law texts.
+Your job is to verify if each finding is actually supported by the retrieved law texts.
+
+Rules:
+- If ALL findings are supported by the retrieved laws → return exactly: {{"verdict": "pass", "retry_query": ""}}
+- If ANY finding is NOT supported by retrieved laws → return exactly: {{"verdict": "re-fetch", "retry_query": "specific query to fetch better laws"}}
+- Return ONLY valid JSON, no explanation, no markdown, no backticks
+
+Analyst Findings:
+{state['analyst_findings']}
+
+Retrieved Laws:
+{state['retrieved_laws']}
+
+Return only JSON:"""
+
+    result = model.invoke(prompt)
+    cleaned = result.content.strip()
+    parsed = json.loads(cleaned)
+    
+    return {
+        "guard_verdict": parsed["verdict"],
+        "retry_query": parsed["retry_query"],
+        "retry_count": state["retry_count"] + 1
+    }

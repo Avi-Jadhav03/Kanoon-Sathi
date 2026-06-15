@@ -11,6 +11,7 @@ from state import LegalAuditState
 from agents import type_identifier, meaning_extractor
 from agents import cross_checker
 from agents import law_fetcher
+from agents import hallucination_guard
 
 
 
@@ -45,3 +46,9 @@ print("Laws:", result3)
 result4 = cross_checker(test_state)
 print("Findings:", result4)
 test_state.update(result4)
+
+
+
+result5 = hallucination_guard(test_state)
+print("Guard:", result5)
+test_state.update(result5)
