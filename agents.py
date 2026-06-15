@@ -79,3 +79,36 @@ def law_fetcher(state: LegalAuditState):
     retrieved_laws = [doc.page_content for doc in docs]
     
     return {"retrieved_laws": retrieved_laws}
+
+
+def cross_checker(state: LegalAuditState):
+    prompt = f"""You are an expert Indian legal document auditor.
+
+I will give you extracted information from a legal document and relevant Indian laws.
+Your job is to cross-check the document against the laws and find all problems.
+
+Look for:
+- Missing mandatory clauses
+- Illegal or risky terms
+- Procedural errors
+- Missing information that Indian law requires
+
+Rules:
+- Return ONLY a valid JSON array, nothing else
+- No explanation, no markdown, no backticks
+- Each finding must have these exact keys: "issue", "law_reference", "severity", "suggested_fix"
+- Severity must be "high", "medium" or "low"
+- Keep language simple and plain English
+
+Extracted Document Information:
+{state['extracted_clauses']}
+
+Relevant Indian Laws:
+{state['retrieved_laws']}
+
+Return only JSON array:"""
+
+    result = model.invoke(prompt)
+    cleaned = result.content.strip()
+    parsed = json.loads(cleaned)
+    return {"analyst_findings": parsed}
