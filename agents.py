@@ -66,18 +66,37 @@ def meaning_extractor(state : LegalAuditState):
     return {"extracted_clauses": parsed}
 
 def law_fetcher(state: LegalAuditState):
-    # Use retry_query if available, otherwise build from extracted clauses
     if state["retry_query"]:
         query = state["retry_query"]
+        docs = retriever.invoke(query)
     else:
-        query = f"Laws related to {state['document_type']} in India covering {str(state['extracted_clauses'])}"
-    
-    # Search vector store
-    docs = retriever.invoke(query)
-    
-    # Extract just the text from each retrieved document
+        # Build specific queries from extracted clauses
+        clauses_str = str(state['extracted_clauses'])
+        
+        queries = [
+            f"landlord tenant rights obligations {state['document_type']}",
+            f"rent payment terms security deposit India law",
+            f"notice period termination lease agreement India",
+            f"registration requirements {state['document_type']} India"
+        ]
+        
+        # Search for each query and combine results
+        all_docs = []
+        for q in queries:
+            docs = retriever.invoke(q)
+            all_docs.extend(docs)
+        
+        # Remove duplicates
+        seen = set()
+        unique_docs = []
+        for doc in all_docs:
+            if doc.page_content not in seen:
+                seen.add(doc.page_content)
+                unique_docs.append(doc)
+        
+        docs = unique_docs
+
     retrieved_laws = [doc.page_content for doc in docs]
-    
     return {"retrieved_laws": retrieved_laws}
 
 
@@ -119,17 +138,25 @@ Return only JSON array:"""
     parsed = json.loads(cleaned)
     return {"analyst_findings": parsed}
 
-
 def hallucination_guard(state: LegalAuditState):
-    prompt = f"""You are a strict legal AI auditor.
+    prompt = f"""You are a strict legal AI verifier.
 
-I will give you a list of findings from a legal document analysis and the actual retrieved law texts.
-Your job is to verify if each finding is actually supported by the retrieved law texts.
+I will give you the original document, analyst findings, and retrieved laws.
+Your job is to verify each finding by checking TWO things:
+1. Is this finding actually true based on what the document says?
+2. Is this finding supported by the retrieved laws?
+
+If a finding claims something is missing but it IS in the document → REJECT it
+If a finding claims something exists but it is NOT in the document → REJECT it  
+If ALL findings are accurate and law-backed → return "pass"
+If ANY finding is wrong → return "re-fetch" with a specific query to get better laws
 
 Rules:
-- If ALL findings are supported by the retrieved laws → return exactly: {{"verdict": "pass", "retry_query": ""}}
-- If ANY finding is NOT supported by retrieved laws → return exactly: {{"verdict": "re-fetch", "retry_query": "specific query to fetch better laws"}}
-- Return ONLY valid JSON, no explanation, no markdown, no backticks
+- Return ONLY valid JSON, no markdown, no backticks
+- Return exactly: {{"verdict": "pass", "retry_query": ""}} or {{"verdict": "re-fetch", "retry_query": "specific query"}}
+
+Original Document:
+{state['raw_document']}
 
 Analyst Findings:
 {state['analyst_findings']}

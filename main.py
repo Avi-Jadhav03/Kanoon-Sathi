@@ -51,18 +51,17 @@ graph.add_edge("report_generator", END)
 # Compile the graph
 app = graph.compile()
 
-# Test with fake document
-test_document = """
-RENT AGREEMENT
+from langchain_community.document_loaders import PyPDFLoader
 
-This agreement is made between Ram Sharma (Owner) and Shyam Patel (Tenant).
-Property Address: 123, MG Road, Pune, Maharashtra.
-Monthly Rent: Rs. 8000
-Agreement Start Date: 1st January 2024
-"""
+loader = PyPDFLoader('rent_agreement.pdf')
+pages = loader.load()
+raw_text = " ".join([page.page_content for page in pages])
+
+
+
 
 initial_state = {
-    "raw_document": test_document,
+    "raw_document": raw_text,
     "document_type": "",
     "extracted_clauses": [],
     "retrieved_laws": [],
