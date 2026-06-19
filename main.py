@@ -51,30 +51,3 @@ graph.add_edge("report_generator", END)
 # Compile the graph
 app = graph.compile()
 
-from langchain_community.document_loaders import PyPDFLoader
-
-loader = PyPDFLoader('rent_agreement.pdf')
-pages = loader.load()
-raw_text = " ".join([page.page_content for page in pages])
-
-
-
-
-initial_state = {
-    "raw_document": raw_text,
-    "document_type": "",
-    "extracted_clauses": [],
-    "retrieved_laws": [],
-    "analyst_findings": [],
-    "guard_verdict": "",
-    "retry_count": 0,
-    "retry_query": "",
-    "final_report": ""
-}
-
-# Run the pipeline
-result = app.invoke(initial_state)
-
-print("\n========== FINAL AUDIT REPORT ==========")
-print(result["final_report"])
-print("========================================")
