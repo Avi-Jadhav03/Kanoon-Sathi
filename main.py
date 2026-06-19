@@ -1,3 +1,57 @@
+from langgraph.graph import StateGraph, END
+from state import LegalAuditState
+from agents import (
+    type_identifier,
+    meaning_extractor,
+    law_fetcher,
+    cross_checker,
+    hallucination_guard,
+    report_generator
+)
+
+# Build the graph
+graph = StateGraph(LegalAuditState)
+
+# Add all nodes
+graph.add_node("type_identifier", type_identifier)
+graph.add_node("meaning_extractor", meaning_extractor)
+graph.add_node("law_fetcher", law_fetcher)
+graph.add_node("cross_checker", cross_checker)
+graph.add_node("hallucination_guard", hallucination_guard)
+graph.add_node("report_generator", report_generator)
+
+# Add normal edges
+graph.set_entry_point("type_identifier")
+graph.add_edge("type_identifier", "meaning_extractor")
+graph.add_edge("meaning_extractor", "law_fetcher")
+graph.add_edge("law_fetcher", "cross_checker")
+graph.add_edge("cross_checker", "hallucination_guard")
+
+# Add conditional edge for hallucination guard loop
+def route_guard(state: LegalAuditState):
+    if state["guard_verdict"] == "pass":
+        return "report_generator"
+    elif state["retry_count"] >= 3:
+        # Safety limit - stop infinite loop
+        return "report_generator"
+    else:
+        return "law_fetcher"
+
+graph.add_conditional_edges(
+    "hallucination_guard",
+    route_guard,
+    {
+        "report_generator": "report_generator",
+        "law_fetcher": "law_fetcher"
+    }
+)
+
+graph.add_edge("report_generator", END)
+
+# Compile the graph
+app = graph.compile()
+
+# Test with fake document
 test_document = """
 RENT AGREEMENT
 
@@ -7,15 +61,7 @@ Monthly Rent: Rs. 8000
 Agreement Start Date: 1st January 2024
 """
 
-from state import LegalAuditState
-from agents import type_identifier, meaning_extractor
-from agents import cross_checker
-from agents import law_fetcher
-from agents import hallucination_guard
-
-
-
-test_state = {
+initial_state = {
     "raw_document": test_document,
     "document_type": "",
     "extracted_clauses": [],
@@ -27,36 +73,9 @@ test_state = {
     "final_report": ""
 }
 
-# Run agent 1
-result1 = type_identifier(test_state)
-# print("Type:", result1)
-test_state.update(result1)
+# Run the pipeline
+result = app.invoke(initial_state)
 
-# Run agent 2
-result2 = meaning_extractor(test_state)
-# print("Extracted:", result2)
-test_state.update(result2)
-
-# Run agent 3
-result3 = law_fetcher(test_state)
-# print("Laws:", result3)
-
-
-
-result4 = cross_checker(test_state)
-# print("Findings:", result4)
-test_state.update(result4)
-
-
-
-result5 = hallucination_guard(test_state)
-# print("Guard:", result5)
-test_state.update(result5)
-
-from agents import report_generator
-
-# Force guard to pass for testing
-test_state["guard_verdict"] = "pass"
-
-result6 = report_generator(test_state)
-print("Report:", result6)
+print("\n========== FINAL AUDIT REPORT ==========")
+print(result["final_report"])
+print("========================================")

@@ -88,12 +88,18 @@ I will give you extracted information from a legal document and relevant Indian 
 Your job is to cross-check the document against the laws and find all problems.
 
 Look for:
-- Missing mandatory clauses
+- Missing mandatory clauses that Indian law REQUIRES
+- Clauses that Indian law PROHIBITS but are present in the document
 - Illegal or risky terms
 - Procedural errors
-- Missing information that Indian law requires
 
-Rules:
+Important rules for analysis:
+- If a law says "shall not contain X" → flag if document HAS X, not if it is missing
+- If a law says "must contain X" → flag if document is MISSING X
+- Read the law carefully before deciding if something is missing or prohibited
+- Never flip the meaning of what the law says
+
+Output rules:
 - Return ONLY a valid JSON array, nothing else
 - No explanation, no markdown, no backticks
 - Each finding must have these exact keys: "issue", "law_reference", "severity", "suggested_fix"
