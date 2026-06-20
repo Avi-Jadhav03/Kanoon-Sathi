@@ -6,3 +6,5 @@ chromadb
 langchain-community
 langchain-hugginface
 langchain-chroma
+aiofiles
+python-multipart

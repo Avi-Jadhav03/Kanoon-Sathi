@@ -5,6 +5,9 @@ from main import app as pipeline
 import tempfile
 import os
 import ast
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 
 
 app = FastAPI()
@@ -15,6 +18,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def home():
+    return FileResponse("static/index.html")
 
 @app.post("/audit")
 async def audit_document(file: UploadFile = File(...)):
